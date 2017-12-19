@@ -1,0 +1,23 @@
+{
+  "name": "cube3",
+  "version": "1.0.0",
+  "description": "OLAP for front-end development",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ManhQLe/cube3.git"
+  },
+  "keywords": [
+    "cube8",
+    "OLAP"
+  ],
+  "author": "Manh Le",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ManhQLe/cube3/issues"
+  },
+  "homepage": "https://github.com/ManhQLe/cube3#readme"
+}
