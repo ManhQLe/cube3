@@ -8,16 +8,19 @@ class cube3 {
     }
 
     dim(fx,table,name,compare = cube3.DEF.defComp){
-        cube3.CONV.insertDistinct(this.dims,x=>x.name===name,{fx,table,name});
+        name = (name || ++cube3.CONV.dimName);
+        cube3.CONV.insertDistinct(this.dims,x=>x.name===name,{fx,table,name,compare});
         return this;
     }
 
     agg(fx,table,name){
+        name = (name || ++cube3.CONV.dimName);
         cube3.CONV.insertDistinct(this.aggs,x=>x.name===name,{fx,table,name});
         return this;
     }
 
     rollup(fx,table,name){
+        name = (name || ++cube3.CONV.dimName);
         cube3.CONV.insertDistinct(this.rollups,x=>x.name===name,{fx,table,name});
         return this;
     }
@@ -37,22 +40,26 @@ class cube3 {
         const {dset} = this;
         const dlen = tnames.reduce((a,b)=> Math.max(a,dset[b].length),0);
         const fdims = this.dims.filter(d=>dims.indexOf(d.name)>=0);
-
+        
         const result = {};
 
         cube3.oneLoop([dlen,tnames.length,fdims.length],(idx)=>{
-            const [i,ni,di] = idx;
+            const [i,ni,di] = idx;            
             const tname = tnames[ni]
             const tab = dset[tname];
-            if(i<tab.length){
+            if(i<tab.length){                
+                
                 const d = tab[i];
                 const dim = fdims[di];
                 if(tname === dim.table){
-                    const a = result[tname] || (result[tname] = [])
-                    a.find(x=>dim.compfx(x,))
+
+                    const facts = result[dim.name] || (result[dim.name] = [])
+                    const fact = dim.fx(d);
+                    cube3.CONV.insertDistinct(facts,x=>dim.compare(x,fact)===0,fact);                    
                 }
             }
         })
+        return result
     }
 
     getMeasure(m){
@@ -92,6 +99,7 @@ cube3.oneLoop = function (Lens, fx) {
 }
 
 cube3.CONV = {
+    dimName:0,    
     insertDistinct:function(array,findfx,d){
         !array.find(findfx) 
         && array.push(d);
