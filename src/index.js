@@ -1,69 +1,114 @@
 class cube3 {
-    constructor(){
-        this.dset= null;
+    constructor() {
+        this.dset = null;
         this.dims = [];
         this.aggs = [];
         this.rels = [];
         this.rollups = [];
     }
 
-    dim(fx,table,name,compare = cube3.DEF.defComp){
+    dim(fx, table, name, compare = cube3.DEF.defComp) {
         name = (name || ++cube3.CONV.dimName);
-        cube3.CONV.insertDistinct(this.dims,x=>x.name===name,{fx,table,name,compare});
+        cube3.CONV.insertDistinct(this.dims, x => x.name === name, {
+            fx,
+            table,
+            name,
+            compare
+        });
         return this;
     }
 
-    agg(fx,table,name){
+    agg(fx, table, name) {
         name = (name || ++cube3.CONV.dimName);
-        cube3.CONV.insertDistinct(this.aggs,x=>x.name===name,{fx,table,name});
+        cube3.CONV.insertDistinct(this.aggs, x => x.name === name, {
+            fx,
+            table,
+            name
+        });
         return this;
     }
 
-    rollup(fx,table,name){
+    rollup(fx, name) {
         name = (name || ++cube3.CONV.dimName);
-        cube3.CONV.insertDistinct(this.rollups,x=>x.name===name,{fx,table,name});
+        cube3.CONV.insertDistinct(this.rollups, x => x.name === name, {
+            fx,            
+            name
+        });
         return this;
     }
 
-    rel(fx,t1,t2){
-        this.rels.push({fx,t1,t2});
+    rel(fx, t1, t2) {
+        this.rels.push({
+            fx,
+            t1,
+            t2
+        });
         return this;
     }
 
-    data(dset){
+    data(dset) {
         this.dset = dset;
         return this;
     }
 
-    getDims(dims){
+    getDims(dims) {
         const tnames = Object.keys(this.dset);
-        const {dset} = this;
-        const dlen = tnames.reduce((a,b)=> Math.max(a,dset[b].length),0);
-        const fdims = this.dims.filter(d=>dims.indexOf(d.name)>=0);
-        
+        const {
+            dset
+        } = this;
+        const dlen = tnames.reduce((a, b) => Math.max(a, dset[b].length), 0);
+        const fdims = this.dims.filter(d => dims.indexOf(d.name) >= 0);
+
         const result = {};
 
-        cube3.oneLoop([dlen,tnames.length,fdims.length],(idx)=>{
-            const [i,ni,di] = idx;            
+        cube3.oneLoop([dlen, tnames.length, fdims.length], (idx) => {
+            const [i, ni, di] = idx;
             const tname = tnames[ni]
             const tab = dset[tname];
-            if(i<tab.length){                
-                
+            if (i < tab.length) {
+
                 const d = tab[i];
                 const dim = fdims[di];
-                if(tname === dim.table){
+                if (tname === dim.table) {
 
                     const facts = result[dim.name] || (result[dim.name] = [])
                     const fact = dim.fx(d);
-                    cube3.CONV.insertDistinct(facts,x=>dim.compare(x,fact)===0,fact);                    
+                    cube3.CONV.insertDistinct(facts, x => dim.compare(x, fact) === 0, fact);
                 }
             }
         })
         return result
     }
 
-    getMeasure(m){
+    getMeasure(measures, filter = {}) {
+        const {
+            dims,
+            aggs,
+            dset
+        } = this;
+        let result = {}
+        const faggs = aggs.filter(a => measures.indexOf(a.name) >= 0);
 
+        const temp = this.rollups.filter(r=>measures.indexOf(r.name)>=0);
+
+        const frollup = {};
+        temp.forEach(r=>frollup[r.name]=r);
+
+        const tnames = Object.keys(this.dset);
+        const dlen = tnames.reduce((a, b) => Math.max(a, dset[b].length), 0);
+
+        cube3.oneLoop([dlen, faggs.length], ([i, ai]) => {          
+            const agg = faggs[ai];
+            const table = dset[agg.table];
+            if(table && i<table.length){
+               
+                const d = table[i];                
+                const roll = frollup[agg.name];
+
+                roll && (result[agg.name] = roll.fx(result[agg.name],agg.fx(d)));
+            }
+        });
+        return result;
     }
 
 }
@@ -73,7 +118,8 @@ cube3.oneLoop = function (Lens, fx) {
     var Total = DimLen;
     var Granula = [];
     var Idx = [];
-    var i = 0, r, c;
+    var i = 0,
+        r, c;
     var k = 1;
     var inc;
     Lens.forEach(function (l, s) {
@@ -99,16 +145,16 @@ cube3.oneLoop = function (Lens, fx) {
 }
 
 cube3.CONV = {
-    dimName:0,    
-    insertDistinct:function(array,findfx,d){
-        !array.find(findfx) 
-        && array.push(d);
-    }    
+    dimName: 0,
+    insertDistinct: function (array, findfx, d) {
+        !array.find(findfx) &&
+            array.push(d);
+    }
 }
 
 cube3.DEF = {
-    defAgg:(d)=>{},
-    defComp:(a,b)=>a===b?0:(a>b?-1:1)
+    defAgg: (d) => {},
+    defComp: (a, b) => a === b ? 0 : (a > b ? -1 : 1)
 }
 
 module.exports = cube3;

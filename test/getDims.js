@@ -34,16 +34,9 @@ var cube = new cube3();
 cube.dim(d=>d.Cust,"Orders","Customer")
 .dim(d=>d.OrderId,"Items","OrderId")
 .dim(d=>d.Item,"Items","Item")
-
-.agg(d=>d.Cost,"Items","Cost")
-
-.rollup((a,b)=>{
-    return a && b? a+b:(a?a:b);
-},"Cost")
 .data(dataSet);
 
-// console.log(cube.dims)
+console.log(cube.dims)
 
-// console.log(cube.getDims(["Customer","OrderId","Item"]))
+console.log(cube.getDims(["Customer","OrderId","Item"]))
 
-console.log(cube.getMeasure(["Cost"]))
