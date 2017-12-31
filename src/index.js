@@ -88,13 +88,17 @@ class cube3 {
         } = this;
         let result = {}
         const faggs = aggs.filter(a => measures.indexOf(a.name) >= 0);
+        const fdims = dims.filter(d=>filter.hasOwnProperty(d.name))
+        const askingTables = [];
+        faggs.forEach(x => askingTables.indexOf(x.table)<0 &&askingTables.push(x.table));
+        fdims.forEach(x => askingTables.indexOf(x.table)<0 &&askingTables.push(x.table));
 
         const temp = this.rollups.filter(r=>measures.indexOf(r.name)>=0);
 
         const frollup = {};
         temp.forEach(r=>frollup[r.name]=r);
 
-        const tnames = Object.keys(this.dset);
+        const tnames = Object.keys(this.dset).filter(t=>askingTables.indexOf(t)>=0);
         const dlen = tnames.reduce((a, b) => Math.max(a, dset[b].length), 0);
 
         cube3.oneLoop([dlen, faggs.length], ([i, ai]) => {          
