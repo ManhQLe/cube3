@@ -56,4 +56,4 @@ cube.dim(d=>d.Cust,"Orders","Customer")
 
 // console.log(cube.getDims(["Customer","OrderId","Item"]))
 
-console.log(cube.getMeasure(["Cost"]))
+cube.getMeasure(["Cost"], {"Item":"",Customer:""})
