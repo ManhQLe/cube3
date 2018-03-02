@@ -1,0 +1,51 @@
+Cube3 Architecture
+
+Cube3.dset : Collection of Table
+{
+    "T1": Array,
+    "T2": Array
+    ...: Array
+}
+
+Cube3.dims: Array of Defintion of Dimension
+
+[{
+    table:"T1",
+    fx:function(d){ return Facts},  // Return a fact from dimension
+    name:"DimName1",
+    compare:function(a,b) {} //Facts compare function return -1,1,0
+},
+{
+    table:"T2",
+    fx:function(d){ return Facts},  // Return a fact from dimension
+    name:"DimName1",
+    compare:function(a,b) {} //Facts compare function return -1,1,0
+}
+]
+
+Cube3.aggs: Array of Aggregations
+
+[
+    {
+        fx:function(d){ return agg} // Return aggregation
+        table:"T1",
+        name:"Agg1"
+    }
+]
+
+Cube3.rollups: Array of Rollup
+
+[
+    {
+        fx:function(a,b){return agg} // return agg;
+    }
+]
+
+Cube3.rels: Array of Relationships
+[
+    {
+        fx:function(dt1,dt2){ return false/true}
+        t1:"T1",
+        t2:"T2"
+    }
+]

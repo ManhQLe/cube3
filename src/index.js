@@ -1,4 +1,4 @@
-class cube3 {
+class Cube3 {
     constructor() {
         this.dset = null;
         this.dims = [];
@@ -7,9 +7,9 @@ class cube3 {
         this.rollups = [];
     }
 
-    dim(fx, table, name, compare = cube3.DEF.defComp) {
-        name = (name || ++cube3.CONV.dimName);
-        cube3.CONV.insertDistinct(this.dims, x => x.name === name, {
+    dim(fx, table, name, compare = Cube3.DEF.defComp) {
+        name = (name || ++Cube3.CONV.dimName);
+        Cube3.CONV.insertDistinct(this.dims, x => x.name === name, {
             fx,
             table,
             name,
@@ -19,8 +19,8 @@ class cube3 {
     }
 
     agg(fx, table, name) {
-        name = (name || ++cube3.CONV.dimName);
-        cube3.CONV.insertDistinct(this.aggs, x => x.name === name, {
+        name = (name || ++Cube3.CONV.dimName);
+        Cube3.CONV.insertDistinct(this.aggs, x => x.name === name, {
             fx,
             table,
             name
@@ -29,8 +29,8 @@ class cube3 {
     }
 
     rollup(fx, name) {
-        name = (name || ++cube3.CONV.dimName);
-        cube3.CONV.insertDistinct(this.rollups, x => x.name === name, {
+        name = (name || ++Cube3.CONV.dimName);
+        Cube3.CONV.insertDistinct(this.rollups, x => x.name === name, {
             fx,
             name
         });
@@ -61,7 +61,7 @@ class cube3 {
 
         const result = {};
 
-        cube3.oneLoop([dlen, tnames.length, fdims.length], (idx) => {
+        Cube3.oneLoop([dlen, tnames.length, fdims.length], (idx) => {
             const [i, ni, di] = idx;
             const tname = tnames[ni]
             const tab = dset[tname];
@@ -73,7 +73,7 @@ class cube3 {
 
                     const facts = result[dim.name] || (result[dim.name] = [])
                     const fact = dim.fx(d);
-                    cube3.CONV.insertDistinct(facts, x => dim.compare(x, fact) === 0, fact);
+                    Cube3.CONV.insertDistinct(facts, x => dim.compare(x, fact) === 0, fact);
                 }
             }
         })
@@ -86,12 +86,13 @@ class cube3 {
             dims,
             aggs,
             rollups,
+            rels,
             dset
         } = this;
         const results = {};
         const tnames = [];
         const alltnames = Object.keys(dset);
-        const laggs = {};        
+        const laggs = {};
         aggs.forEach(a => {
             measures.indexOf(a.name) && (laggs[a.name] = a);
 
@@ -109,33 +110,57 @@ class cube3 {
                 tnames.push(d.table)
         })
 
-        const froll={}
+        rels.forEach(r => {
+            if (alltnames.indexOf(r.t1) >= 0 && alltnames.indexOf(r.t2) >= 0) //valid
+            {
+                if (tnames.indexOf(r.t1) >= 0) {
+                    Cube3.CONV.insertDistinct(tnames, (a) => a === r.t2, r.t2);
+                } else
+                if (tnames.indexOf(r.t2) >= 0)
+                    Cube3.CONV.insertDistinct(tnames, (a) => a === r.t1, r.t1);
+            }
+        })
 
-        rollups.forEach(r=>measures.indexOf(r.name)>=0 && (froll[r.name] = r));
-
-        const gra = cube3.gra(tnames.map(t => dset[t].length));
+        const froll = {}
+        const gra = Cube3.gra(tnames.map(t => dset[t].length));
         const total = gra.reduce((a, b) => {
             return a * b
         }, 1);
-        let pos=[];
-        const ameasures= Object.keys(laggs)
-        cube3.oneLoop([total, ameasures.length], ([i, mi]) => {
-            mi === 0 && (pos = cube3.disect(i,gra))
+        let pos = [];
+        const ameasures = Object.keys(laggs)
+        rollups.forEach(r => ameasures.indexOf(r.name) >= 0 && (froll[r.name] = r));
+
+        Cube3.oneLoop([total, ameasures.length], ([i, mi]) => {
+            mi === 0 && (pos = Cube3.disect(i, gra))
 
             const a = laggs[ameasures[mi]];
             const t = dset[a.table];
             const di = pos[tnames.indexOf(a.table)];
             const m = a.fx(t[di]);
-            const roll = froll[a.name];
 
-            
+            //Should we roll this?
+
+            //Get all relationship related to this agg
+            const prels = [];
+            rels.forEach(r => {
+                r.t1 === a.table || r.t2 === a.table
+            })
+
+            let yes = true;
+
+            if (yes) {
+                const roll = froll[a.name];
+                results[roll.name] = roll.fx(results[roll.name], m)
+            }
+
+
 
         })
     }
 
 }
 
-cube3.oneLoop = function (Lens, fx) {
+Cube3.oneLoop = function (Lens, fx) {
     var DimLen = Lens.length;
     var Total = DimLen;
     var Granula = [];
@@ -167,7 +192,7 @@ cube3.oneLoop = function (Lens, fx) {
     }
 }
 
-cube3.gra = function (dims) {
+Cube3.gra = function (dims) {
     const g = [];
     let x = 1;
     dims.forEach((l, i) => {
@@ -177,7 +202,7 @@ cube3.gra = function (dims) {
     return g.reverse();
 }
 
-cube3.dimmap = function (v, gra) {
+Cube3.dimmap = function (v, gra) {
     let r = 0;
     v.forEach((x, i) => {
         r += x * gra[i]
@@ -185,7 +210,8 @@ cube3.dimmap = function (v, gra) {
     return r;
 }
 
-cube3.disect = function (x, gra) {
+
+Cube3.disect = function (x, gra) {
     const dv = [];
     while (i++ < gra.length) {
         dv.push(Math.floor(x / gra[i]))
@@ -194,7 +220,7 @@ cube3.disect = function (x, gra) {
     return dv;
 }
 
-cube3.CONV = {
+Cube3.CONV = {
     dimName: 0,
     insertDistinct: function (array, findfx, d) {
         !array.find(findfx) &&
@@ -202,9 +228,9 @@ cube3.CONV = {
     }
 }
 
-cube3.DEF = {
+Cube3.DEF = {
     defAgg: (d) => {},
     defComp: (a, b) => a === b ? 0 : (a > b ? -1 : 1)
 }
 
-module.exports = cube3;
+module.exports = Cube3;
