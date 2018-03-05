@@ -49,3 +49,12 @@ Cube3.rels: Array of Relationships
         t2:"T2"
     }
 ]
+
+getMeasure returns Agg
+{
+    Agg1: Sum,
+    Agg2: Sum
+}
+
+How?
+The simplest way is to Go through all table 

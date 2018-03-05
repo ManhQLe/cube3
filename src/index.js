@@ -89,73 +89,58 @@ class Cube3 {
             rels,
             dset
         } = this;
-        const results = {};
-        const tnames = [];
-        const alltnames = Object.keys(dset);
-        const laggs = {};
-        aggs.forEach(a => {
-            measures.indexOf(a.name) && (laggs[a.name] = a);
+        
+        const results = {}
+        const alltNames = Object.keys(dset);
+        const immRelatedTable = [];       
+        const filterNames = Object.keys(filter);
+        const lut = {
+            aggs:{},
+            dims:{},
+            rollups:{},
+            rels:{}
+        }
 
-            tnames.indexOf(a.table) < 0 &&
-                alltnames.indexOf(a.table) >= 0 &&
-                measures.indexOf(a.name) >= 0 &&
-                tnames.push(a.table)
-        })
-
-        dims.forEach(d => {
-
-            tnames.indexOf(d.table) < 0 &&
-                alltnames.indexOf(d.table) >= 0 &&
-                filter.hasOwnProperty(d.name) &&
-                tnames.push(d.table)
-        })
-
-        rels.forEach(r => {
-            if (alltnames.indexOf(r.t1) >= 0 && alltnames.indexOf(r.t2) >= 0) //valid
-            {
-                if (tnames.indexOf(r.t1) >= 0) {
-                    Cube3.CONV.insertDistinct(tnames, (a) => a === r.t2, r.t2);
-                } else
-                if (tnames.indexOf(r.t2) >= 0)
-                    Cube3.CONV.insertDistinct(tnames, (a) => a === r.t1, r.t1);
-            }
-        })
-
-        const froll = {}
-        const gra = Cube3.gra(tnames.map(t => dset[t].length));
-        const total = gra.reduce((a, b) => {
-            return a * b
-        }, 1);
-        let pos = [];
-        const ameasures = Object.keys(laggs)
-        rollups.forEach(r => ameasures.indexOf(r.name) >= 0 && (froll[r.name] = r));
-
-        Cube3.oneLoop([total, ameasures.length], ([i, mi]) => {
-            mi === 0 && (pos = Cube3.disect(i, gra))
-
-            const a = laggs[ameasures[mi]];
-            const t = dset[a.table];
-            const di = pos[tnames.indexOf(a.table)];
-            const m = a.fx(t[di]);
-
-            //Should we roll this?
-
-            //Get all relationship related to this agg
-            const prels = [];
-            rels.forEach(r => {
-                r.t1 === a.table || r.t2 === a.table
+        aggs.forEach(a=>{
+            measures.indexOf(a.name)>=0?(lut.aggs[a.name]=a):1
+            Cube3.CONV.insertDistinct(immRelatedTable,x=>x===a.table,a.table)
+                            
+            rels.forEach(r=>{
+                if(immRelatedTable.indexOf(r.t1)>=0)
+                    Cube3.CONV.insertDistinct(immRelatedTable,x=>x===r.t2,r.t2)
+                if(immRelatedTable.indexOf(r.t2)>=0)
+                    Cube3.CONV.insertDistinct(immRelatedTable,x=>x===r.t1,r.t1)
             })
 
-            let yes = true;
-
-            if (yes) {
-                const roll = froll[a.name];
-                results[roll.name] = roll.fx(results[roll.name], m)
-            }
-
-
-
         })
+
+        dims.forEach(d=>{            
+            filterNames.indexOf(d.name)>=0?(lut.dims[d.name] = d):1;
+        })
+
+        
+
+        rollups.forEach(r=>{
+            measures.indexOf(r.name)>=0?(lut.rollups[r.name]=r):1
+        })
+        
+
+        const Lens = immRelatedTable.map(tname=>dset[tname].length);
+
+
+
+        Cube3.oneLoop(Lens,function(Idx){
+            measures.forEach(m=>{
+                const agg = lut.aggs[m]
+                const i = immRelatedTable.indexOf(agg.table);
+                const idx = Idx[i];
+                const d = dset[agg.table][idx];
+                const measure = agg.fx(d);
+                results[m] = lut.rollups[m].fx(results[m],measure);
+            })
+        })
+
+        return results;
     }
 
 }
